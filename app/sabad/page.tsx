@@ -1,6 +1,102 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type CartItem = {
+  id: number;
+  name: string;
+  price: number;
+  image: string;
+  quantity: number;
+};
+
 export default function Sabad() {
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart");
+
+    if (savedCart) {
+      try {
+        setCart(JSON.parse(savedCart));
+      } catch {
+        setCart([]);
+      }
+    }
+
+    setLoaded(true);
+  }, []);
+
+  const updateCart = (newCart: CartItem[]) => {
+    setCart(newCart);
+
+    localStorage.setItem(
+      "cart",
+      JSON.stringify(newCart)
+    );
+  };
+
+  const increaseQuantity = (id: number) => {
+    const newCart = cart.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            quantity: item.quantity + 1,
+          }
+        : item
+    );
+
+    updateCart(newCart);
+  };
+
+  const decreaseQuantity = (id: number) => {
+    const newCart = cart
+      .map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              quantity: item.quantity - 1,
+            }
+          : item
+      )
+      .filter(
+        (item) => item.quantity > 0
+      );
+
+    updateCart(newCart);
+  };
+
+  const removeProduct = (id: number) => {
+    const newCart = cart.filter(
+      (item) => item.id !== id
+    );
+
+    updateCart(newCart);
+  };
+
+  const totalCount = cart.reduce(
+    (total, item) =>
+      total + item.quantity,
+    0
+  );
+
+  const totalPrice = cart.reduce(
+    (total, item) =>
+      total +
+      item.price * item.quantity,
+    0
+  );
+
+  const formatPrice = (price: number) => {
+    return price.toLocaleString("fa-IR");
+  };
+
   return (
-    <main className="cart-page" dir="rtl">
+    <main
+      className="cart-page"
+      dir="rtl"
+    >
 
       <div className="cart-container">
 
@@ -26,10 +122,13 @@ export default function Sabad() {
 
           </span>
 
-          <h1>ثبت خرید</h1>
+          <h1>
+            ثبت خرید
+          </h1>
 
           <p>
-            محصولاتی که انتخاب کردی اینجا منتظرت هستن
+            محصولاتی که انتخاب کردی
+            اینجا منتظرت هستن
           </p>
 
         </div>
@@ -41,43 +140,160 @@ export default function Sabad() {
 
           <div className="cart-products">
 
-            <div className="empty-cart">
+            {!loaded ? (
 
-              <div className="empty-icon">
+              <div className="empty-cart">
 
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 4h2l2 12h10l3-9H6" />
-                  <circle cx="9" cy="20" r="1.5" />
-                  <circle cx="18" cy="20" r="1.5" />
-                </svg>
+                <h2>
+                  در حال بارگذاری...
+                </h2>
 
               </div>
 
-              <h2>
-                سبد خریدت خالیه
-              </h2>
+            ) : cart.length === 0 ? (
 
-              <p>
-                هنوز محصولی به سبد خرید اضافه نکردی.
-                <br />
-                یه سر به محصولاتمون بزن و استایل مورد علاقه‌ات رو پیدا کن.
-              </p>
+              /* EMPTY */
 
-              <a
-                href="/"
-                className="back-shopping"
-              >
-                مشاهده محصولات
-              </a>
+              <div className="empty-cart">
 
-            </div>
+                <div className="empty-icon">
+
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 4h2l2 12h10l3-9H6" />
+                    <circle cx="9" cy="20" r="1.5" />
+                    <circle cx="18" cy="20" r="1.5" />
+                  </svg>
+
+                </div>
+
+                <h2>
+                  سبد خریدت خالیه
+                </h2>
+
+                <p>
+                  هنوز محصولی به سبد خرید اضافه نکردی.
+                  <br />
+                  یه سر به محصولاتمون بزن و
+                  استایل مورد علاقه‌ات رو پیدا کن.
+                </p>
+
+                <a
+                  href="/products"
+                  className="back-shopping"
+                >
+                  مشاهده محصولات
+                </a>
+
+              </div>
+
+            ) : (
+
+              /* PRODUCTS */
+
+              <div className="cart-items">
+
+                {cart.map((item) => (
+
+                  <div
+                    className="cart-item"
+                    key={item.id}
+                  >
+
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="cart-item-image"
+                    />
+
+
+                    <div className="cart-item-info">
+
+                      <h3>
+                        {item.name}
+                      </h3>
+
+                      <p>
+                        {formatPrice(item.price)}
+                        {" "}
+                        تومان
+                      </p>
+
+
+                      {/* QUANTITY */}
+
+                      <div className="cart-quantity">
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            decreaseQuantity(
+                              item.id
+                            )
+                          }
+                        >
+                          −
+                        </button>
+
+                        <span>
+                          {item.quantity.toLocaleString(
+                            "fa-IR"
+                          )}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            increaseQuantity(
+                              item.id
+                            )
+                          }
+                        >
+                          +
+                        </button>
+
+                      </div>
+
+                    </div>
+
+
+                    <div className="cart-item-left">
+
+                      <strong>
+                        {formatPrice(
+                          item.price *
+                            item.quantity
+                        )}{" "}
+                        تومان
+                      </strong>
+
+                      <button
+                        type="button"
+                        className="remove-product"
+                        onClick={() =>
+                          removeProduct(
+                            item.id
+                          )
+                        }
+                      >
+                        حذف
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                ))}
+
+              </div>
+
+            )}
 
           </div>
 
@@ -86,194 +302,248 @@ export default function Sabad() {
 
           <div className="cart-summary">
 
-            <h2>خلاصه خرید</h2>
+            <h2>
+              خلاصه خرید
+            </h2>
 
             <div className="summary-row">
-              <span>تعداد محصولات</span>
-              <strong>۰</strong>
+
+              <span>
+                تعداد محصولات
+              </span>
+
+              <strong>
+                {totalCount.toLocaleString(
+                  "fa-IR"
+                )}
+              </strong>
+
             </div>
 
-            <div className="summary-row">
-              <span>مبلغ محصولات</span>
-              <strong>۰ تومان</strong>
-            </div>
 
             <div className="summary-row">
-              <span>هزینه ارسال</span>
-              <strong>رایگان</strong>
+
+              <span>
+                مبلغ محصولات
+              </span>
+
+              <strong>
+                {formatPrice(totalPrice)}
+                {" "}
+                تومان
+              </strong>
+
             </div>
+
+
+            <div className="summary-row">
+
+              <span>
+                هزینه ارسال
+              </span>
+
+              <strong>
+                ....
+              </strong>
+
+            </div>
+
 
             <div className="summary-line"></div>
 
-            <div className="summary-total">
-              <span>مبلغ نهایی</span>
-              <strong>۰ تومان</strong>
-            </div>
 
-            <button
-              className="checkout-btn"
-              disabled
-            >
-              ادامه ثبت سفارش
-            </button>
+            <div className="summary-total">
+
+              <span>
+                مبلغ نهایی
+              </span>
+
+              <strong>
+                {formatPrice(totalPrice)}
+                {" "}
+                تومان
+              </strong>
+
+            </div>
+            <a
+  href="/checkout"
+  className="checkout-btn"
+  style={{
+    pointerEvents: cart.length === 0 ? "none" : "auto",
+    opacity: cart.length === 0 ? 0.5 : 1,
+  }}
+>
+  ادامه ثبت سفارش
+</a>
+
+
+           
 
           </div>
 
         </div>
 
       </div>
-      {/* =========================
-    FOOTER
-========================= */}
-
-<footer className="site-footer">
-
-<div className="footer-container">
-
-  {/* معرفی */}
-
-  <div className="footer-about">
-
-    <img
-      src="/media/hom.png"
-      alt="homestyle"
-      className="footer-logo"
-    />
-
-    <p>
-      استایل تو، انتخاب تو ✨
-    </p>
-
-    <span>
-      لباس‌هایی برای ساختن استایل خاص خودت.
-    </span>
-
-  </div>
 
 
-  {/* دسترسی سریع */}
+      {/* FOOTER */}
 
-  <div className="footer-column">
+      <footer className="site-footer">
 
-    <h3>دسترسی سریع</h3>
+        <div className="footer-container">
 
-    <a href="/">خانه</a>
-    <a href="/">محصولات</a>
-    <a href="#">تیشرت</a>
-    <a href="#">شلوار</a>
-    <a href="#">درباره ما</a>
+          <div className="footer-about">
 
-  </div>
+            <img
+              src="/media/hom.png"
+              alt="homestyle"
+              className="footer-logo"
+            />
 
+            <p>
+              استایل تو، انتخاب تو ✨
+            </p>
 
-  {/* ارتباط با ما */}
+            <span>
+              لباس‌هایی برای ساختن استایل خاص خودت.
+            </span>
 
-  <div className="footer-column">
-
-    <h3>ارتباط با ما</h3>
-
-    <a href="#">
-      ...
-    </a>
-
-    <a href="tel:09123456789">
-      📞 ۰۹۱۲۳۴۵۶۷۸۹
-    </a>
-
-    <a href="mailto:info@homestyle.ir">
-      ✉️ info@homestyle.ir
-    </a>
-
-  </div>
+          </div>
 
 
-  {/* شبکه‌های اجتماعی */}
+          <div className="footer-column">
 
-  <div className="footer-social">
+            <h3>
+              دسترسی سریع
+            </h3>
 
-    <h3>ما را دنبال کنید</h3>
+            <a href="/">
+              خانه
+            </a>
 
-    <p>
-      برای دیدن جدیدترین محصولات همراه ما باشید.
-    </p>
+            <a href="/products">
+              محصولات
+            </a>
 
+            <a href="#">
+              تیشرت
+            </a>
 
-    <div className="social-icons">
+            <a href="#">
+              شلوار
+            </a>
 
-      {/* Instagram */}
+            <a href="#">
+              درباره ما
+            </a>
 
-      <a href="#" aria-label="Instagram">
-
-        <svg viewBox="0 0 24 24">
-
-          <rect
-            x="3"
-            y="3"
-            width="18"
-            height="18"
-            rx="5"
-          />
-
-          <circle
-            cx="12"
-            cy="12"
-            r="4"
-          />
-
-          <circle
-            cx="17.5"
-            cy="6.5"
-            r="1"
-          />
-
-        </svg>
-
-      </a>
+          </div>
 
 
-      {/* Telegram */}
+          <div className="footer-column">
 
-      <a href="#" aria-label="Telegram">
+            <h3>
+              ارتباط با ما
+            </h3>
 
-        <svg viewBox="0 0 24 24">
+            <a href="#">
+              ...
+            </a>
 
-          <path d="M21 3 3 10.5l6.5 2.5L12 20l3-5 4-2Z" />
+            <a href="tel:09123456789">
+              📞 ۰۹۱۲۳۴۵۶۷۸۹
+            </a>
 
-        </svg>
+            <a href="mailto:info@homestyle.ir">
+              ✉️ info@homestyle.ir
+            </a>
 
-      </a>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-{/* پایین فوتر */}
-
-<div className="footer-bottom">
-
-  <p>
-    © ۱۴۰۵ homestyle — تمامی حقوق محفوظ است.
-  </p>
-
-  <span>
-    ساخته شده با ❤️
-  </span>
-
-</div>
-
-</footer>
+          </div>
 
 
-      {/* =========================
-          BOTTOM NAVIGATION
-      ========================== */}
+          <div className="footer-social">
+
+            <h3>
+              ما را دنبال کنید
+            </h3>
+
+            <p>
+              برای دیدن جدیدترین محصولات
+              همراه ما باشید.
+            </p>
+
+            <div className="social-icons">
+
+              <a
+                href="#"
+                aria-label="Instagram"
+              >
+
+                <svg viewBox="0 0 24 24">
+
+                  <rect
+                    x="3"
+                    y="3"
+                    width="18"
+                    height="18"
+                    rx="5"
+                  />
+
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="4"
+                  />
+
+                  <circle
+                    cx="17.5"
+                    cy="6.5"
+                    r="1"
+                  />
+
+                </svg>
+
+              </a>
+
+
+              <a
+                href="#"
+                aria-label="Telegram"
+              >
+
+                <svg viewBox="0 0 24 24">
+
+                  <path d="M21 3 3 10.5l6.5 2.5L12 20l3-5 4-2Z" />
+
+                </svg>
+
+              </a>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div className="footer-bottom">
+
+          <p>
+            © ۱۴۰۵ homestyle — تمامی حقوق محفوظ است.
+          </p>
+
+          <span>
+            ساخته شده با ❤️
+          </span>
+
+        </div>
+
+      </footer>
+
+
+      {/* BOTTOM NAV */}
 
       <nav className="bottom-nav">
-
-        {/* خانه */}
 
         <a
           href="/"
@@ -286,33 +556,43 @@ export default function Sabad() {
             <path d="M9 21v-6h6v6" />
           </svg>
 
-          <span>خانه</span>
+          <span>
+            خانه
+          </span>
 
         </a>
 
-
-        {/* ثبت خرید */}
 
         <a
           href="/sabad"
           className="bottom-nav-item active"
         >
 
-          <svg viewBox="0 0 24 24">
-            <path d="M3 4h2l2 12h10l3-9H6" />
-            <circle cx="9" cy="20" r="1.5" />
-            <circle cx="18" cy="20" r="1.5" />
-          </svg>
+          <div className="bottom-cart-icon">
 
-          <span>ثبت خرید</span>
+            <svg viewBox="0 0 24 24">
+              <path d="M3 4h2l2 12h10l3-9H6" />
+              <circle cx="9" cy="20" r="1.5" />
+              <circle cx="18" cy="20" r="1.5" />
+            </svg>
+
+            {totalCount > 0 && (
+              <span className="cart-count">
+                {totalCount}
+              </span>
+            )}
+
+          </div>
+
+          <span>
+            ثبت خرید
+          </span>
 
         </a>
 
 
-        {/* محصولات */}
-
         <a
-          href="#"
+          href="/products"
           className="bottom-nav-item"
         >
 
@@ -322,12 +602,12 @@ export default function Sabad() {
             <path d="M8 7a4 4 0 0 1 8 0" />
           </svg>
 
-          <span>محصولات</span>
+          <span>
+            محصولات
+          </span>
 
         </a>
 
-
-        {/* جستجو */}
 
         <a
           href="#"
@@ -335,11 +615,18 @@ export default function Sabad() {
         >
 
           <svg viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="7" />
+            <circle
+              cx="11"
+              cy="11"
+              r="7"
+            />
+
             <path d="m20 20-4-4" />
           </svg>
 
-          <span>جستجو</span>
+          <span>
+            جستجو
+          </span>
 
         </a>
 
