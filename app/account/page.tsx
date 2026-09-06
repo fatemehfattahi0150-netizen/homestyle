@@ -224,7 +224,7 @@ export default function AccountPage() {
           <div className="footer-about">
 
             <img
-              src="/media/hom.png"
+              src="media/hom.jpg"
               alt="HomeStyle"
               className="footer-logo"
             />

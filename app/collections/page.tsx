@@ -165,7 +165,7 @@ export default function CollectionsPage() {
     <div className="footer-about">
 
       <img
-        src="/media/hom.png"
+        src="media/hom.jpg"
         alt="homestyle"
         className="footer-logo"
       />

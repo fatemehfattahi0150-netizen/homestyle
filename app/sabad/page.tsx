@@ -395,7 +395,7 @@ export default function Sabad() {
           <div className="footer-about">
 
             <img
-              src="/media/hom.png"
+              src="media/hom.jpg"
               alt="homestyle"
               className="footer-logo"
             />

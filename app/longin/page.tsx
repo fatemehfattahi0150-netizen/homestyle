@@ -29,7 +29,7 @@ export default function LoginPage() {
 
           <div className="auth-logo">
             <img
-              src="/media/hom.png"
+              src="media/hom.jpg"
               alt="HomeStyle"
             />
           </div>

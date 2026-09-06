@@ -1,100 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-
-const products = [
-  {
-    id: 1,
-    code: "TS001",
-    name: "تیشرت مینیمال",
-    description: "تیشرت راحت و شیک",
-    price: "۸۹۰,۰۰۰ تومان",
-    image: "/media/تیشرت.png",
-    badge: "ویژه",
-    category: "tshirt",
-  },
-  {
-    id: 2,
-    code: "PA001",
-    name: "شلوار کژوال",
-    description: "استایل راحت روزمره",
-    price: "۱,۲۵۰,۰۰۰ تومان",
-    image: "/media/شلوار.png",
-    badge: "جدید",
-    category: "pants",
-  },
-  {
-    id: 3,
-    code: "HA001",
-    name: "کلاه مینیمال",
-    description: "کلاه شیک و مناسب استایل روزمره",
-    price: "۵۹۰,۰۰۰ تومان",
-    image: "/media/کلاه.png",
-    badge: "ویژه",
-    category: "hat",
-  },
-  {
-    id: 4,
-    code: "TS002",
-    name: "تیشرت کلاسیک",
-    description: "سادگی همیشه جذابه",
-    price: "۷۹۰,۰۰۰ تومان",
-    image: "/media/تیشرت.png",
-    badge: "",
-    category: "tshirt",
-  },
-  {
-    id: 5,
-    code: "PA002",
-    name: "شلوار کتان",
-    description: "نرم و مناسب استفاده روزانه",
-    price: "۱,۴۹۰,۰۰۰ تومان",
-    image: "/media/شلوار.png",
-    badge: "",
-    category: "pants",
-  },
-  {
-    id: 6,
-    code: "HA002",
-    name: "کلاه سبز پاستیلی",
-    description: "استایل خاص و متفاوت",
-    price: "۶۹۰,۰۰۰ تومان",
-    image: "/media/کلاه.png",
-    badge: "محبوب",
-    category: "hat",
-  },
-];
+import { useEffect, useState } from "react";
 
 const reviews = [
   {
     name: "سارا",
-    text: "تیشرتی که خریدم خیلی خوش‌دوخت و راحت بود. جنس پارچه هم واقعاً خوبه.",
+    text: "تجربه خرید عالی بود و کیفیت محصولات واقعاً خوب بود.",
   },
   {
     name: "مریم",
-    text: "شلوار کژوال خیلی قشنگه و کیفیتش از چیزی که انتظار داشتم بهتر بود.",
+    text: "طراحی سایت خیلی قشنگه و خرید ازش راحت و جذابه.",
   },
   {
     name: "نگار",
-    text: "کلاه خیلی شیکه و کیفیتش عالیه. رنگش هم دقیقاً مثل عکس بود.",
+    text: "کیفیت و بسته‌بندی محصولات خیلی خوب بود.",
   },
 ];
 
 export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [notification, setNotification] = useState("");
 
-  const searchResults = products.filter((product) => {
-    const search = searchText.trim().toLowerCase();
+  /* ================= LOAD NOTIFICATION ================= */
 
-    if (!search) return false;
-
-    return (
-      product.name.toLowerCase().includes(search) ||
-      product.code.toLowerCase().includes(search)
+  useEffect(() => {
+    const savedNotification = localStorage.getItem(
+      "homestyle-notification"
     );
-  });
+
+    if (savedNotification) {
+      setNotification(savedNotification);
+    }
+  }, []);
 
   return (
     <main dir="rtl">
@@ -107,7 +46,7 @@ export default function Home() {
           <div className="logo">
             <Link href="/">
               <img
-                src="/media/hom.png"
+                src="media/hom.jpg"
                 alt="لوگوی فروشگاه"
                 className="logo-img"
               />
@@ -155,7 +94,7 @@ export default function Home() {
 
           <div className="header-icons">
 
-            {/* ================= SEARCH ================= */}
+            {/* SEARCH */}
 
             <button
               type="button"
@@ -187,7 +126,7 @@ export default function Home() {
             </button>
 
 
-            {/* ================= USER ================= */}
+            {/* USER */}
 
             <Link
               href="/longin"
@@ -213,14 +152,13 @@ export default function Home() {
             </Link>
 
 
-            {/* ================= CART ================= */}
+            {/* CART */}
 
             <Link
               href="/sabad"
               className="icon-btn cart-btn"
               aria-label="سبد خرید"
             >
-
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -248,17 +186,42 @@ export default function Home() {
       </header>
 
 
+      {/* ================= NOTIFICATION ================= */}
+
+      {notification && (
+        <section className="home-notification">
+
+          <div className="home-notification-content">
+
+            <strong>
+              اطلاعیه
+            </strong>
+
+            <p>
+              {notification}
+            </p>
+
+          </div>
+
+        </section>
+      )}
+
+
       {/* ================= SEARCH MODAL ================= */}
 
       {showSearch && (
         <div
           className="search-overlay"
-          onClick={() => setShowSearch(false)}
+          onClick={() =>
+            setShowSearch(false)
+          }
         >
 
           <div
             className="search-modal"
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) =>
+              event.stopPropagation()
+            }
           >
 
             <button
@@ -273,7 +236,9 @@ export default function Home() {
               ×
             </button>
 
+
             <div className="search-modal-icon">
+
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -295,7 +260,9 @@ export default function Home() {
                   y2="16.65"
                 />
               </svg>
+
             </div>
+
 
             <h2>
               جستجوی محصول
@@ -304,6 +271,7 @@ export default function Home() {
             <p>
               نام یا کد محصول مورد نظرت رو وارد کن
             </p>
+
 
             <div className="search-input-wrapper">
 
@@ -329,20 +297,21 @@ export default function Home() {
                 />
               </svg>
 
+
               <input
                 type="text"
                 value={searchText}
                 onChange={(event) =>
-                  setSearchText(event.target.value)
+                  setSearchText(
+                    event.target.value
+                  )
                 }
-                placeholder="مثلاً تیشرت مینیمال یا TS001"
+                placeholder="نام یا کد محصول"
                 autoFocus
               />
 
             </div>
 
-
-            {/* ================= SEARCH RESULTS ================= */}
 
             {searchText.trim() !== "" && (
               <div className="search-results">
@@ -351,67 +320,21 @@ export default function Home() {
                   نتایج جستجو
                 </span>
 
-                {searchResults.length > 0 ? (
+                <div className="no-search-result">
 
-                  <div className="search-results-list">
+                  <span>
+                    🔍
+                  </span>
 
-                    {searchResults.map((product) => (
+                  <p>
+                    هنوز محصولی برای نمایش وجود ندارد
+                  </p>
 
-                      <Link
-                        key={product.id}
-                        href={`/products/${product.id}`}
-                        className="search-result-item"
-                        onClick={() =>
-                          setShowSearch(false)
-                        }
-                      >
+                  <small>
+                    محصولات بعداً از پنل مدیریت اضافه می‌شوند.
+                  </small>
 
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                        />
-
-                        <div className="search-result-info">
-
-                          <h3>
-                            {product.name}
-                          </h3>
-
-                          <span>
-                            کد محصول: {product.code}
-                          </span>
-
-                          <strong>
-                            {product.price}
-                          </strong>
-
-                        </div>
-
-                      </Link>
-
-                    ))}
-
-                  </div>
-
-                ) : (
-
-                  <div className="no-search-result">
-
-                    <span>
-                      🔍
-                    </span>
-
-                    <p>
-                      محصولی پیدا نشد
-                    </p>
-
-                    <small>
-                      نام یا کد محصول را بررسی کن.
-                    </small>
-
-                  </div>
-
-                )}
+                </div>
 
               </div>
             )}
@@ -452,6 +375,7 @@ export default function Home() {
 
         </div>
 
+
         <div className="hero-visual">
 
           <div className="hero-blob"></div>
@@ -475,12 +399,14 @@ export default function Home() {
           دسته‌بندی‌ها
         </h2>
 
+
         <div className="categories-grid">
 
           <Link
             href="/products?category=tshirt"
             className="category-card"
           >
+
             <img
               src="/media/تیشرت.png"
               alt="تیشرت"
@@ -490,6 +416,7 @@ export default function Home() {
             <span className="category-name">
               تیشرت
             </span>
+
           </Link>
 
 
@@ -497,6 +424,7 @@ export default function Home() {
             href="/products?category=pants"
             className="category-card"
           >
+
             <img
               src="/media/شلوار.png"
               alt="شلوار"
@@ -506,6 +434,7 @@ export default function Home() {
             <span className="category-name">
               شلوار
             </span>
+
           </Link>
 
 
@@ -513,6 +442,7 @@ export default function Home() {
             href="/products?category=hat"
             className="category-card"
           >
+
             <img
               src="/media/کلاه.png"
               alt="کلاه"
@@ -522,6 +452,7 @@ export default function Home() {
             <span className="category-name">
               کلاه
             </span>
+
           </Link>
 
         </div>
@@ -545,58 +476,13 @@ export default function Home() {
 
         </div>
 
+
         <div className="products-grid">
 
-          {products.map((product) => (
-
-            <Link
-              key={product.id}
-              href={`/products/${product.id}`}
-              className="product-card"
-            >
-
-              <div className="product-image">
-
-                <img
-                  src={product.image}
-                  alt={product.name}
-                />
-
-                {product.badge && (
-                  <span className="product-badge">
-                    {product.badge}
-                  </span>
-                )}
-
-              </div>
-
-              <div className="product-info">
-
-                <h3>
-                  {product.name}
-                </h3>
-
-                <p>
-                  {product.description}
-                </p>
-
-                <div className="product-bottom">
-
-                  <strong>
-                    {product.price}
-                  </strong>
-
-                  <span className="product-plus">
-                    +
-                  </span>
-
-                </div>
-
-              </div>
-
-            </Link>
-
-          ))}
+          {/* 
+            محصولات ویژه‌ای که ادمین از پنل انتخاب می‌کند
+            بعداً به صورت خودکار اینجا نمایش داده می‌شوند.
+          */}
 
         </div>
 
@@ -623,35 +509,38 @@ export default function Home() {
           </span>
 
           <h2 className="section-title">
-            رضایت مشتریان از محصولات 🤍
+            رضایت مشتریان 🤍
           </h2>
 
         </div>
 
+
         <div className="reviews-grid">
 
-          {reviews.map((review, index) => (
+          {reviews.map(
+            (review, index) => (
 
-            <div
-              className="review-card"
-              key={index}
-            >
+              <div
+                className="review-card"
+                key={index}
+              >
 
-              <div className="review-stars">
-                ★★★★★
+                <div className="review-stars">
+                  ★★★★★
+                </div>
+
+                <p>
+                  {review.text}
+                </p>
+
+                <strong>
+                  {review.name}
+                </strong>
+
               </div>
 
-              <p>
-                {review.text}
-              </p>
-
-              <strong>
-                {review.name}
-              </strong>
-
-            </div>
-
-          ))}
+            )
+          )}
 
         </div>
 
@@ -699,6 +588,7 @@ export default function Home() {
               cy="20"
               r="1.5"
             />
+
           </svg>
 
           <span>
@@ -729,7 +619,9 @@ export default function Home() {
         <button
           type="button"
           className="bottom-nav-item"
-          onClick={() => setShowSearch(true)}
+          onClick={() =>
+            setShowSearch(true)
+          }
         >
 
           <svg viewBox="0 0 24 24">
@@ -740,6 +632,7 @@ export default function Home() {
             />
 
             <path d="m20 20-4-4" />
+
           </svg>
 
           <span>
@@ -763,7 +656,7 @@ export default function Home() {
           <div className="footer-about">
 
             <img
-              src="/media/hom.png"
+              src="media/hom.jpg"
               alt="homestyle"
               className="footer-logo"
             />
@@ -809,6 +702,19 @@ export default function Home() {
               درباره ما
             </Link>
 
+            {/* ورود به پنل مدیریت */}
+
+            <div className="admin-entry">
+
+              <Link
+                href="/admin"
+                className="admin-entry-button"
+              >
+                مدیریت
+              </Link>
+
+            </div>
+
           </div>
 
 
@@ -842,6 +748,7 @@ export default function Home() {
             <p>
               برای دیدن جدیدترین محصولات همراه ما باشید.
             </p>
+
 
             <div className="social-icons">
 
