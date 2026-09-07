@@ -2,6 +2,7 @@
 
 import {
   useState,
+  useEffect,
   type FormEvent,
   type ChangeEvent,
 } from "react";
@@ -33,6 +34,31 @@ export default function AdminPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
 
+  const [editingProductId, setEditingProductId] =
+    useState<number | null>(null);
+
+  /* ================= LOAD PRODUCTS ================= */
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+          throw new Error("خطا در دریافت محصولات");
+        }
+
+        const data = await response.json();
+
+        setProducts(data);
+      } catch (error) {
+        console.error("Error loading products:", error);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
   /* ================= PRODUCT FORM ================= */
 
   const [productName, setProductName] = useState("");
@@ -56,8 +82,6 @@ export default function AdminPage() {
 
   const [notificationText, setNotificationText] = useState("");
 
-  /* ================= LOAD NOTIFICATION ================= */
-
   const loadNotification = () => {
     const savedNotification = localStorage.getItem(
       "homestyle-notification"
@@ -69,8 +93,6 @@ export default function AdminPage() {
       setNotificationText("");
     }
   };
-
-  /* ================= PUBLISH NOTIFICATION ================= */
 
   const publishNotification = () => {
     const text = notificationText.trim();
@@ -253,6 +275,8 @@ export default function AdminPage() {
   /* ================= RESET FORM ================= */
 
   const resetProductForm = () => {
+    setEditingProductId(null);
+
     setProductName("");
     setProductPrice("");
     setProductStock("");
@@ -271,77 +295,263 @@ export default function AdminPage() {
     setCollections([]);
   };
 
-  /* ================= SAVE PRODUCT ================= */
+  /* ================= OPEN EDIT FORM ================= */
 
-  const saveProduct = () => {
+  const openEditProduct = (product: Product) => {
+    setEditingProductId(product.id);
+
+    setProductName(product.name);
+    setProductPrice(product.price);
+    setProductStock(String(product.stock));
+    setProductCategory(product.category);
+    setProductDescription(product.description);
+
+    setProductImages(
+      Array.isArray(product.images)
+        ? product.images
+        : []
+    );
+
+    setProductSizes(
+      Array.isArray(product.sizes)
+        ? product.sizes
+        : []
+    );
+
+    setProductColors(
+      Array.isArray(product.colors)
+        ? product.colors
+        : []
+    );
+
+    setIsFeatured(product.isFeatured);
+
+    setCollections(
+      Array.isArray(product.collections)
+        ? product.collections
+        : []
+    );
+
+    setNewSize("");
+    setNewColor("");
+
+    setActivePanel("edit-product");
+  };
+
+  /* ================= SAVE NEW PRODUCT ================= */
+
+  const saveProduct = async () => {
     if (!productName.trim()) {
-      alert(
-        "لطفاً نام محصول را وارد کنید."
-      );
+      alert("لطفاً نام محصول را وارد کنید.");
       return;
     }
 
     if (!productPrice.trim()) {
-      alert(
-        "لطفاً قیمت محصول را وارد کنید."
-      );
+      alert("لطفاً قیمت محصول را وارد کنید.");
       return;
     }
 
     if (!productStock.trim()) {
-      alert(
-        "لطفاً تعداد موجودی محصول را وارد کنید."
-      );
+      alert("لطفاً تعداد موجودی محصول را وارد کنید.");
       return;
     }
 
     if (Number(productStock) < 0) {
-      alert(
-        "تعداد موجودی نمی‌تواند منفی باشد."
-      );
+      alert("تعداد موجودی نمی‌تواند منفی باشد.");
       return;
     }
 
     if (!productCategory) {
-      alert(
-        "لطفاً دسته‌بندی محصول را انتخاب کنید."
-      );
+      alert("لطفاً دسته‌بندی محصول را انتخاب کنید.");
       return;
     }
 
-    const newProduct: Product = {
-      id: Date.now(),
+    try {
+      const response = await fetch("/api/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: productName.trim(),
+          price: productPrice.trim(),
+          stock: Number(productStock),
+          category: productCategory,
+          description: productDescription.trim(),
+          images: productImages,
+          sizes: productSizes,
+          colors: productColors,
+          isFeatured,
+          collections,
+        }),
+      });
 
-      name: productName.trim(),
+      if (!response.ok) {
+        throw new Error("خطا در ذخیره محصول");
+      }
 
-      price: productPrice.trim(),
+      const newProduct = await response.json();
 
-      stock: Number(productStock),
+      setProducts((current) => [
+        newProduct,
+        ...current,
+      ]);
 
-      category: productCategory,
+      resetProductForm();
+      setActivePanel(null);
 
-      description:
-        productDescription.trim(),
+      alert("محصول با موفقیت ذخیره شد.");
+    } catch (error) {
+      console.error(
+        "Error saving product:",
+        error
+      );
 
-      images: productImages,
+      alert(
+        "ذخیره محصول انجام نشد. دوباره تلاش کنید."
+      );
+    }
+  };
 
-      sizes: productSizes,
+  /* ================= UPDATE PRODUCT ================= */
 
-      colors: productColors,
+  const updateProduct = async () => {
+    if (editingProductId === null) {
+      return;
+    }
 
-      isFeatured,
+    if (!productName.trim()) {
+      alert("لطفاً نام محصول را وارد کنید.");
+      return;
+    }
 
-      collections,
-    };
+    if (!productPrice.trim()) {
+      alert("لطفاً قیمت محصول را وارد کنید.");
+      return;
+    }
 
-    setProducts((current) => [
-      ...current,
-      newProduct,
-    ]);
+    if (!productStock.trim()) {
+      alert("لطفاً تعداد موجودی محصول را وارد کنید.");
+      return;
+    }
 
-    resetProductForm();
+    if (Number(productStock) < 0) {
+      alert("تعداد موجودی نمی‌تواند منفی باشد.");
+      return;
+    }
 
-    setActivePanel(null);
+    if (!productCategory) {
+      alert("لطفاً دسته‌بندی محصول را انتخاب کنید.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/products", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: editingProductId,
+          name: productName.trim(),
+          price: productPrice.trim(),
+          stock: Number(productStock),
+          category: productCategory,
+          description: productDescription.trim(),
+          images: productImages,
+          sizes: productSizes,
+          colors: productColors,
+          isFeatured,
+          collections,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("خطا در ویرایش محصول");
+      }
+
+      const updatedProduct =
+        await response.json();
+
+      setProducts((current) =>
+        current.map((product) =>
+          product.id === updatedProduct.id
+            ? updatedProduct
+            : product
+        )
+      );
+
+      resetProductForm();
+      setActivePanel(null);
+
+      alert(
+        "محصول با موفقیت ویرایش شد."
+      );
+    } catch (error) {
+      console.error(
+        "Error updating product:",
+        error
+      );
+
+      alert(
+        "ویرایش محصول انجام نشد. دوباره تلاش کنید."
+      );
+    }
+  };
+
+  /* ================= DELETE PRODUCT ================= */
+
+  const deleteProduct = async (productId: number) => {
+    const confirmed = window.confirm(
+      "آیا از حذف این محصول مطمئن هستید؟"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        "/api/products",
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: productId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || "حذف محصول انجام نشد."
+        );
+      }
+
+      setProducts((currentProducts) =>
+        currentProducts.filter(
+          (item) =>
+            item.id !== productId
+        )
+      );
+
+      alert(
+        "محصول با موفقیت حذف شد."
+      );
+    } catch (error) {
+      console.error(
+        "Error deleting product:",
+        error
+      );
+
+      alert(
+        "حذف محصول انجام نشد. دوباره تلاش کنید."
+      );
+    }
   };
 
   /* ================= LOGIN PAGE ================= */
@@ -479,7 +689,6 @@ export default function AdminPage() {
 
         </div>
 
-
         {/* HAMBURGER */}
 
         <button
@@ -502,7 +711,6 @@ export default function AdminPage() {
 
       </header>
 
-
       {/* SIDE MENU */}
 
       {menuOpen && (
@@ -516,8 +724,6 @@ export default function AdminPage() {
           />
 
           <aside className="admin-side-menu">
-
-            {/* PROFILE */}
 
             <div className="admin-profile">
 
@@ -543,9 +749,6 @@ export default function AdminPage() {
               </div>
 
             </div>
-
-
-            {/* MENU */}
 
             <div className="admin-menu-items">
 
@@ -601,9 +804,6 @@ export default function AdminPage() {
 
             </div>
 
-
-            {/* LOGOUT */}
-
             <button
               className="admin-logout"
               onClick={handleLogout}
@@ -616,12 +816,9 @@ export default function AdminPage() {
         </>
       )}
 
-
       {/* MAIN */}
 
       <section className="admin-content">
-
-        {/* FILTER */}
 
         <div className="admin-filter">
 
@@ -647,7 +844,6 @@ export default function AdminPage() {
           </button>
 
         </div>
-
 
         {/* PRODUCTS */}
 
@@ -702,7 +898,6 @@ export default function AdminPage() {
 
                     </div>
 
-
                     <div>
 
                       <h3>
@@ -737,43 +932,24 @@ export default function AdminPage() {
 
                   </div>
 
-
                   <div className="admin-product-actions">
 
                     <button
                       onClick={() =>
-                        openPanel(
-                          `edit-${product.id}`
+                        openEditProduct(
+                          product
                         )
                       }
                     >
                       ویرایش
                     </button>
 
-
                     <button
-                      onClick={() => {
-
-                        const confirmed =
-                          window.confirm(
-                            "آیا از حذف این محصول مطمئن هستید؟"
-                          );
-
-                        if (!confirmed)
-                          return;
-
-                        setProducts(
-                          (
-                            currentProducts
-                          ) =>
-                            currentProducts.filter(
-                              (item) =>
-                                item.id !==
-                                product.id
-                            )
-                        );
-
-                      }}
+                      onClick={() =>
+                        deleteProduct(
+                          product.id
+                        )
+                      }
                     >
                       حذف
                     </button>
@@ -791,7 +967,6 @@ export default function AdminPage() {
 
       </section>
 
-
       {/* ADD PRODUCT */}
 
       <button
@@ -806,7 +981,6 @@ export default function AdminPage() {
         +
       </button>
 
-
       {/* POPUP */}
 
       {activePanel && (
@@ -817,13 +991,13 @@ export default function AdminPage() {
 
             <button
               className="admin-popup-close"
-              onClick={() =>
-                setActivePanel(null)
-              }
+              onClick={() => {
+                resetProductForm();
+                setActivePanel(null);
+              }}
             >
               بستن
             </button>
-
 
             {/* PRODUCTS */}
 
@@ -853,7 +1027,6 @@ export default function AdminPage() {
               </>
             )}
 
-
             {/* ADD PRODUCT */}
 
             {activePanel ===
@@ -864,519 +1037,101 @@ export default function AdminPage() {
                   افزودن محصول جدید
                 </h2>
 
-
-                <div className="admin-form">
-
-                  {/* NAME */}
-
-                  <label>
-
-                    نام محصول
-
-                    <input
-                      type="text"
-                      value={
-                        productName
-                      }
-                      onChange={(e) =>
-                        setProductName(
-                          e.target.value
-                        )
-                      }
-                      placeholder="نام محصول"
-                    />
-
-                  </label>
-
-
-                  {/* PRICE */}
-
-                  <label>
-
-                    قیمت
-
-                    <input
-                      type="text"
-                      value={
-                        productPrice
-                      }
-                      onChange={(e) =>
-                        setProductPrice(
-                          e.target.value
-                        )
-                      }
-                      placeholder="مثلاً ۱,۴۹۰,۰۰۰ تومان"
-                    />
-
-                  </label>
-
-
-                  {/* STOCK */}
-
-                  <label>
-
-                    تعداد موجودی
-
-                    <input
-                      type="number"
-                      min="0"
-                      value={
-                        productStock
-                      }
-                      onChange={(e) =>
-                        setProductStock(
-                          e.target.value
-                        )
-                      }
-                      placeholder="مثلاً 10"
-                    />
-
-                  </label>
-
-
-                  {/* CATEGORY */}
-
-                  <label>
-
-                    دسته‌بندی
-
-                    <select
-                      value={
-                        productCategory
-                      }
-                      onChange={(e) =>
-                        setProductCategory(
-                          e.target.value
-                        )
-                      }
-                    >
-
-                      <option value="">
-                        انتخاب دسته‌بندی
-                      </option>
-
-                      <option value="تیشرت">
-                        تیشرت
-                      </option>
-
-                      <option value="شلوار">
-                        شلوار
-                      </option>
-
-                      <option value="کلاه">
-                        کلاه
-                      </option>
-
-                      <option value="کیف و کوله">
-                        کیف و کوله
-                      </option>
-
-                      <option value="ست">
-                        ست
-                      </option>
-
-                    </select>
-
-                  </label>
-
-
-                  {/* IMAGES */}
-
-                  <div className="admin-image-upload">
-
-                    <strong>
-                      عکس‌های محصول
-                    </strong>
-
-                    <p>
-                      می‌توانی چند عکس برای محصول انتخاب کنی.
-                    </p>
-
-
-                    <label className="admin-file-button">
-
-                      انتخاب عکس‌ها
-
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={
-                          handleImageUpload
-                        }
-                      />
-
-                    </label>
-
-
-                    {productImages.length >
-                      0 && (
-
-                      <div className="admin-image-preview">
-
-                        {productImages.map(
-                          (
-                            image,
-                            index
-                          ) => (
-
-                            <div
-                              className="admin-preview-item"
-                              key={`${image}-${index}`}
-                            >
-
-                              <img
-                                src={image}
-                                alt={`تصویر ${
-                                  index + 1
-                                }`}
-                              />
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeImage(
-                                    index
-                                  )
-                                }
-                              >
-                                حذف
-                              </button>
-
-                            </div>
-
-                          )
-                        )}
-
-                      </div>
-
-                    )}
-
-                  </div>
-
-
-                  {/* DESCRIPTION */}
-
-                  <label>
-
-                    توضیحات
-
-                    <textarea
-                      value={
-                        productDescription
-                      }
-                      onChange={(e) =>
-                        setProductDescription(
-                          e.target.value
-                        )
-                      }
-                      placeholder="توضیحات محصول"
-                    />
-
-                  </label>
-
-
-                  {/* SIZES */}
-
-                  <div className="admin-form-section">
-
-                    <strong>
-                      سایزها
-                    </strong>
-
-                    <div className="admin-add-option">
-
-                      <input
-                        type="text"
-                        value={
-                          newSize
-                        }
-                        onChange={(e) =>
-                          setNewSize(
-                            e.target.value
-                          )
-                        }
-                        onKeyDown={(e) => {
-
-                          if (
-                            e.key ===
-                            "Enter"
-                          ) {
-
-                            e.preventDefault();
-
-                            addSize();
-
-                          }
-
-                        }}
-                        placeholder="مثلاً S یا 38"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={
-                          addSize
-                        }
-                      >
-                        افزودن سایز
-                      </button>
-
-                    </div>
-
-
-                    {productSizes.length >
-                      0 && (
-
-                      <div className="admin-added-options">
-
-                        {productSizes.map(
-                          (size) => (
-
-                            <div
-                              className="admin-added-option"
-                              key={size}
-                            >
-
-                              <span>
-                                {size}
-                              </span>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeSize(
-                                    size
-                                  )
-                                }
-                              >
-                                حذف
-                              </button>
-
-                            </div>
-
-                          )
-                        )}
-
-                      </div>
-
-                    )}
-
-                  </div>
-
-
-                  {/* COLORS */}
-
-                  <div className="admin-form-section">
-
-                    <strong>
-                      رنگ‌ها
-                    </strong>
-
-                    <div className="admin-add-option">
-
-                      <input
-                        type="text"
-                        value={
-                          newColor
-                        }
-                        onChange={(e) =>
-                          setNewColor(
-                            e.target.value
-                          )
-                        }
-                        onKeyDown={(e) => {
-
-                          if (
-                            e.key ===
-                            "Enter"
-                          ) {
-
-                            e.preventDefault();
-
-                            addColor();
-
-                          }
-
-                        }}
-                        placeholder="مثلاً مشکی"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={
-                          addColor
-                        }
-                      >
-                        افزودن رنگ
-                      </button>
-
-                    </div>
-
-
-                    {productColors.length >
-                      0 && (
-
-                      <div className="admin-added-options">
-
-                        {productColors.map(
-                          (color) => (
-
-                            <div
-                              className="admin-added-option"
-                              key={color}
-                            >
-
-                              <span>
-                                {color}
-                              </span>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeColor(
-                                    color
-                                  )
-                                }
-                              >
-                                حذف
-                              </button>
-
-                            </div>
-
-                          )
-                        )}
-
-                      </div>
-
-                    )}
-
-                  </div>
-
-
-                  {/* COLLECTIONS */}
-
-                  <div className="admin-form-section">
-
-                    <strong>
-                      محل نمایش محصول
-                    </strong>
-
-
-                    <label className="admin-checkbox">
-
-                      <input
-                        type="checkbox"
-                        checked={
-                          isFeatured
-                        }
-                        onChange={(e) =>
-                          setIsFeatured(
-                            e.target.checked
-                          )
-                        }
-                      />
-
-                      محصول ویژه
-
-                    </label>
-
-
-                    <label className="admin-checkbox">
-
-                      <input
-                        type="checkbox"
-                        checked={collections.includes(
-                          "تابستانه"
-                        )}
-                        onChange={() =>
-                          toggleCollection(
-                            "تابستانه"
-                          )
-                        }
-                      />
-
-                      کالکشن بهاره
-
-                    </label>
-
-
-                    <label className="admin-checkbox">
-
-                      <input
-                        type="checkbox"
-                        checked={collections.includes(
-                          "تابستانی"
-                        )}
-                        onChange={() =>
-                          toggleCollection(
-                            "تابستانی"
-                          )
-                        }
-                      />
-
-                      کالکشن تابستانی
-
-                    </label>
-
-
-                    <label className="admin-checkbox">
-
-                      <input
-                        type="checkbox"
-                        checked={collections.includes(
-                          "پاییزی "
-                        )}
-                        onChange={() =>
-                          toggleCollection(
-                            "پاییزی "
-                          )
-                        }
-                      />
-
-                      کالکشن پاییزی
-
-                    </label>
-
-
-                    <label className="admin-checkbox">
-
-                      <input
-                        type="checkbox"
-                        checked={collections.includes(
-                          "زمستانی"
-                        )}
-                        onChange={() =>
-                          toggleCollection(
-                            "زمستانی "
-                          )
-                        }
-                      />
-
-                      کالکشن زمستانی
-
-                    </label>
-
-                  </div>
-
-
-                  {/* SAVE */}
-
-                  <button
-                    type="button"
-                    className="admin-primary-button"
-                    onClick={
-                      saveProduct
-                    }
-                  >
-                    ذخیره محصول
-                  </button>
-
-                </div>
+                <ProductForm
+                  productName={productName}
+                  setProductName={setProductName}
+                  productPrice={productPrice}
+                  setProductPrice={setProductPrice}
+                  productStock={productStock}
+                  setProductStock={setProductStock}
+                  productCategory={productCategory}
+                  setProductCategory={setProductCategory}
+                  productDescription={productDescription}
+                  setProductDescription={setProductDescription}
+                  productImages={productImages}
+                  handleImageUpload={handleImageUpload}
+                  removeImage={removeImage}
+                  productSizes={productSizes}
+                  newSize={newSize}
+                  setNewSize={setNewSize}
+                  addSize={addSize}
+                  removeSize={removeSize}
+                  productColors={productColors}
+                  newColor={newColor}
+                  setNewColor={setNewColor}
+                  addColor={addColor}
+                  removeColor={removeColor}
+                  isFeatured={isFeatured}
+                  setIsFeatured={setIsFeatured}
+                  collections={collections}
+                  toggleCollection={toggleCollection}
+                />
+
+                <button
+                  type="button"
+                  className="admin-primary-button"
+                  onClick={saveProduct}
+                >
+                  ذخیره محصول
+                </button>
 
               </>
             )}
 
+            {/* EDIT PRODUCT */}
+
+            {activePanel ===
+              "edit-product" && (
+              <>
+
+                <h2>
+                  ویرایش محصول
+                </h2>
+
+                <p>
+                  اطلاعات محصول را تغییر بده و ذخیره کن.
+                </p>
+
+                <ProductForm
+                  productName={productName}
+                  setProductName={setProductName}
+                  productPrice={productPrice}
+                  setProductPrice={setProductPrice}
+                  productStock={productStock}
+                  setProductStock={setProductStock}
+                  productCategory={productCategory}
+                  setProductCategory={setProductCategory}
+                  productDescription={productDescription}
+                  setProductDescription={setProductDescription}
+                  productImages={productImages}
+                  handleImageUpload={handleImageUpload}
+                  removeImage={removeImage}
+                  productSizes={productSizes}
+                  newSize={newSize}
+                  setNewSize={setNewSize}
+                  addSize={addSize}
+                  removeSize={removeSize}
+                  productColors={productColors}
+                  newColor={newColor}
+                  setNewColor={setNewColor}
+                  addColor={addColor}
+                  removeColor={removeColor}
+                  isFeatured={isFeatured}
+                  setIsFeatured={setIsFeatured}
+                  collections={collections}
+                  toggleCollection={toggleCollection}
+                />
+
+                <button
+                  type="button"
+                  className="admin-primary-button"
+                  onClick={updateProduct}
+                >
+                  ذخیره تغییرات
+                </button>
+
+              </>
+            )}
 
             {/* NOTIFICATIONS */}
 
@@ -1418,7 +1173,6 @@ export default function AdminPage() {
               </>
             )}
 
-
             {/* TRANSACTIONS */}
 
             {activePanel ===
@@ -1440,7 +1194,6 @@ export default function AdminPage() {
               </>
             )}
 
-
             {/* ORDERS */}
 
             {activePanel ===
@@ -1461,7 +1214,6 @@ export default function AdminPage() {
 
               </>
             )}
-
 
             {/* SHIPPING */}
 
@@ -1488,7 +1240,6 @@ export default function AdminPage() {
 
                   </div>
 
-
                   <div>
 
                     <span>
@@ -1501,7 +1252,6 @@ export default function AdminPage() {
                     />
 
                   </div>
-
 
                   <div>
 
@@ -1518,7 +1268,6 @@ export default function AdminPage() {
 
                 </div>
 
-
                 <button className="admin-primary-button">
                   ذخیره تغییرات
                 </button>
@@ -1534,5 +1283,532 @@ export default function AdminPage() {
       )}
 
     </main>
+  );
+}
+
+/* ================= PRODUCT FORM COMPONENT ================= */
+
+type ProductFormProps = {
+  productName: string;
+  setProductName: (value: string) => void;
+
+  productPrice: string;
+  setProductPrice: (value: string) => void;
+
+  productStock: string;
+  setProductStock: (value: string) => void;
+
+  productCategory: string;
+  setProductCategory: (value: string) => void;
+
+  productDescription: string;
+  setProductDescription: (value: string) => void;
+
+  productImages: string[];
+  handleImageUpload: (
+    e: ChangeEvent<HTMLInputElement>
+  ) => void;
+  removeImage: (index: number) => void;
+
+  productSizes: string[];
+  newSize: string;
+  setNewSize: (value: string) => void;
+  addSize: () => void;
+  removeSize: (size: string) => void;
+
+  productColors: string[];
+  newColor: string;
+  setNewColor: (value: string) => void;
+  addColor: () => void;
+  removeColor: (color: string) => void;
+
+  isFeatured: boolean;
+  setIsFeatured: (value: boolean) => void;
+
+  collections: string[];
+  toggleCollection: (collection: string) => void;
+};
+
+function ProductForm({
+  productName,
+  setProductName,
+  productPrice,
+  setProductPrice,
+  productStock,
+  setProductStock,
+  productCategory,
+  setProductCategory,
+  productDescription,
+  setProductDescription,
+
+  productImages,
+  handleImageUpload,
+  removeImage,
+
+  productSizes,
+  newSize,
+  setNewSize,
+  addSize,
+  removeSize,
+
+  productColors,
+  newColor,
+  setNewColor,
+  addColor,
+  removeColor,
+
+  isFeatured,
+  setIsFeatured,
+
+  collections,
+  toggleCollection,
+}: ProductFormProps) {
+  return (
+    <div className="admin-form">
+
+      {/* NAME */}
+
+      <label>
+
+        نام محصول
+
+        <input
+          type="text"
+          value={productName}
+          onChange={(e) =>
+            setProductName(
+              e.target.value
+            )
+          }
+          placeholder="نام محصول"
+        />
+
+      </label>
+
+      {/* PRICE */}
+
+      <label>
+
+        قیمت
+
+        <input
+          type="text"
+          value={productPrice}
+          onChange={(e) =>
+            setProductPrice(
+              e.target.value
+            )
+          }
+          placeholder="مثلاً ۱,۴۹۰,۰۰۰ تومان"
+        />
+
+      </label>
+
+      {/* STOCK */}
+
+      <label>
+
+        تعداد موجودی
+
+        <input
+          type="number"
+          min="0"
+          value={productStock}
+          onChange={(e) =>
+            setProductStock(
+              e.target.value
+            )
+          }
+          placeholder="مثلاً 10"
+        />
+
+      </label>
+
+      {/* CATEGORY */}
+
+      <label>
+
+        دسته‌بندی
+
+        <select
+          value={productCategory}
+          onChange={(e) =>
+            setProductCategory(
+              e.target.value
+            )
+          }
+        >
+
+          <option value="">
+            انتخاب دسته‌بندی
+          </option>
+
+          <option value="تیشرت">
+            تیشرت
+          </option>
+
+          <option value="شلوار">
+            شلوار
+          </option>
+
+          <option value="کلاه">
+            کلاه
+          </option>
+
+          <option value="کیف و کوله">
+            کیف و کوله
+          </option>
+
+          <option value="ست">
+            ست
+          </option>
+
+        </select>
+
+      </label>
+
+      {/* IMAGES */}
+
+      <div className="admin-image-upload">
+
+        <strong>
+          عکس‌های محصول
+        </strong>
+
+        <p>
+          می‌توانی چند عکس برای محصول انتخاب کنی.
+        </p>
+
+        <label className="admin-file-button">
+
+          انتخاب عکس‌ها
+
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={
+              handleImageUpload
+            }
+          />
+
+        </label>
+
+        {productImages.length > 0 && (
+
+          <div className="admin-image-preview">
+
+            {productImages.map(
+              (image, index) => (
+
+                <div
+                  className="admin-preview-item"
+                  key={`${image}-${index}`}
+                >
+
+                  <img
+                    src={image}
+                    alt={`تصویر ${
+                      index + 1
+                    }`}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeImage(
+                        index
+                      )
+                    }
+                  >
+                    حذف
+                  </button>
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        )}
+
+      </div>
+
+      {/* DESCRIPTION */}
+
+      <label>
+
+        توضیحات
+
+        <textarea
+          value={productDescription}
+          onChange={(e) =>
+            setProductDescription(
+              e.target.value
+            )
+          }
+          placeholder="توضیحات محصول"
+        />
+
+      </label>
+
+      {/* SIZES */}
+
+      <div className="admin-form-section">
+
+        <strong>
+          سایزها
+        </strong>
+
+        <div className="admin-add-option">
+
+          <input
+            type="text"
+            value={newSize}
+            onChange={(e) =>
+              setNewSize(
+                e.target.value
+              )
+            }
+            onKeyDown={(e) => {
+
+              if (e.key === "Enter") {
+
+                e.preventDefault();
+
+                addSize();
+
+              }
+
+            }}
+            placeholder="مثلاً S یا 38"
+          />
+
+          <button
+            type="button"
+            onClick={addSize}
+          >
+            افزودن سایز
+          </button>
+
+        </div>
+
+        {productSizes.length > 0 && (
+
+          <div className="admin-added-options">
+
+            {productSizes.map(
+              (size) => (
+
+                <div
+                  className="admin-added-option"
+                  key={size}
+                >
+
+                  <span>
+                    {size}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeSize(
+                        size
+                      )
+                    }
+                  >
+                    حذف
+                  </button>
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        )}
+
+      </div>
+
+      {/* COLORS */}
+
+      <div className="admin-form-section">
+
+        <strong>
+          رنگ‌ها
+        </strong>
+
+        <div className="admin-add-option">
+
+          <input
+            type="text"
+            value={newColor}
+            onChange={(e) =>
+              setNewColor(
+                e.target.value
+              )
+            }
+            onKeyDown={(e) => {
+
+              if (e.key === "Enter") {
+
+                e.preventDefault();
+
+                addColor();
+
+              }
+
+            }}
+            placeholder="مثلاً مشکی"
+          />
+
+          <button
+            type="button"
+            onClick={addColor}
+          >
+            افزودن رنگ
+          </button>
+
+        </div>
+
+        {productColors.length > 0 && (
+
+          <div className="admin-added-options">
+
+            {productColors.map(
+              (color) => (
+
+                <div
+                  className="admin-added-option"
+                  key={color}
+                >
+
+                  <span>
+                    {color}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      removeColor(
+                        color
+                      )
+                    }
+                  >
+                    حذف
+                  </button>
+
+                </div>
+
+              )
+            )}
+
+          </div>
+
+        )}
+
+      </div>
+
+      {/* COLLECTIONS */}
+
+      <div className="admin-form-section">
+
+        <strong>
+          محل نمایش محصول
+        </strong>
+
+        <label className="admin-checkbox">
+
+          <input
+            type="checkbox"
+            checked={isFeatured}
+            onChange={(e) =>
+              setIsFeatured(
+                e.target.checked
+              )
+            }
+          />
+
+          محصول ویژه
+
+        </label>
+
+        <label className="admin-checkbox">
+
+          <input
+            type="checkbox"
+            checked={collections.includes(
+              "تابستانه"
+            )}
+            onChange={() =>
+              toggleCollection(
+                "تابستانه"
+              )
+            }
+          />
+
+          کالکشن بهاره
+
+        </label>
+
+        <label className="admin-checkbox">
+
+          <input
+            type="checkbox"
+            checked={collections.includes(
+              "تابستانی"
+            )}
+            onChange={() =>
+              toggleCollection(
+                "تابستانی"
+              )
+            }
+          />
+
+          کالکشن تابستانی
+
+        </label>
+
+        <label className="admin-checkbox">
+
+          <input
+            type="checkbox"
+            checked={collections.includes(
+              "پاییزی "
+            )}
+            onChange={() =>
+              toggleCollection(
+                "پاییزی "
+              )
+            }
+          />
+
+          کالکشن پاییزی
+
+        </label>
+
+        <label className="admin-checkbox">
+
+          <input
+            type="checkbox"
+            checked={collections.includes(
+              "زمستانی"
+            )}
+            onChange={() =>
+              toggleCollection(
+                "زمستانی"
+              )
+            }
+          />
+
+          کالکشن زمستانی
+
+        </label>
+
+      </div>
+
+    </div>
   );
 }

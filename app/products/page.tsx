@@ -10,33 +10,17 @@ type Product = {
   description: string;
   price: string;
   category: string;
-  badge?: string;
-  image: string;
+  images: string[];
+  sizes: string[];
+  colors: string[];
+  isFeatured: boolean;
+  collections: string[];
+  stock: number;
 };
 
-type CartItem = {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
+type CartItem = Product & {
   quantity: number;
 };
-
-/* ================================================= */
-/* PRODUCTS */
-/* ================================================= */
-
-/*
-  فعلاً هیچ محصول ساختگی‌ای اینجا وجود ندارد.
-  بعداً محصولات از پنل مدیریت / دیتابیس دریافت می‌شوند.
-*/
-
-const products: Product[] = [];
-
-
-/* ================================================= */
-/* PRICE */
-/* ================================================= */
 
 function convertPersianNumber(value: string) {
   const persian = "۰۱۲۳۴۵۶۷۸۹";
@@ -54,7 +38,6 @@ function convertPersianNumber(value: string) {
     .join("");
 }
 
-
 function getPrice(price: string) {
   const converted = convertPersianNumber(price);
 
@@ -63,26 +46,26 @@ function getPrice(price: string) {
       .replace(/,/g, "")
       .replace("تومان", "")
       .trim()
-  );
+  ) || 0;
 }
 
-
-/* ================================================= */
-/* PRODUCTS CONTENT */
-/* ================================================= */
-
 function ProductsContent() {
-
   const searchParams = useSearchParams();
 
   const categoryFromUrl =
     searchParams.get("category");
 
+  /* ================= PRODUCTS ================= */
+
+  const [products, setProducts] =
+    useState<Product[]>([]);
+
+  const [loadingProducts, setLoadingProducts] =
+    useState(true);
 
   /* ================= FILTER ================= */
 
   const getInitialFilter = () => {
-
     if (categoryFromUrl === "tshirt") {
       return "تیشرت";
     }
@@ -98,79 +81,141 @@ function ProductsContent() {
     return "همه";
   };
 
-
   const [filter, setFilter] =
     useState(getInitialFilter);
-
 
   /* ================= CART ================= */
 
   const [cart, setCart] =
     useState<CartItem[]>([]);
 
-
   /* ================= MODAL ================= */
 
   const [showModal, setShowModal] =
     useState(false);
 
-
   const [addedProduct, setAddedProduct] =
     useState<Product | null>(null);
 
-
-  /* ================= LOAD CART ================= */
+  /* ================================================= */
+  /* LOAD PRODUCTS FROM DATABASE */
+  /* ================================================= */
 
   useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoadingProducts(true);
 
+        const response =
+          await fetch("/api/products");
+
+        if (!response.ok) {
+          throw new Error(
+            "خطا در دریافت محصولات"
+          );
+        }
+
+        const data =
+          await response.json();
+
+        const fixedProducts: Product[] =
+          data.map((product: any) => ({
+            ...product,
+
+            images:
+              Array.isArray(product.images)
+                ? product.images
+                : [],
+
+            sizes:
+              Array.isArray(product.sizes)
+                ? product.sizes
+                : [],
+
+            colors:
+              Array.isArray(product.colors)
+                ? product.colors
+                : [],
+
+            collections:
+              Array.isArray(
+                product.collections
+              )
+                ? product.collections
+                : [],
+
+            price:
+              String(product.price ?? ""),
+
+            stock:
+              Number(product.stock ?? 0),
+          }));
+
+        setProducts(fixedProducts);
+
+      } catch (error) {
+        console.error(
+          "Error loading products:",
+          error
+        );
+
+        setProducts([]);
+
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  /* ================================================= */
+  /* LOAD CART */
+  /* ================================================= */
+
+  useEffect(() => {
     const savedCart =
-      localStorage.getItem("cart");
+      localStorage.getItem(
+        "homestyle-cart"
+      );
 
     if (savedCart) {
-
       try {
-
         setCart(
           JSON.parse(savedCart)
         );
-
       } catch {
-
         setCart([]);
-
       }
-
     }
-
   }, []);
 
-
-  /* ================= URL CATEGORY ================= */
+  /* ================================================= */
+  /* URL CATEGORY */
+  /* ================================================= */
 
   useEffect(() => {
-
     if (categoryFromUrl === "tshirt") {
-
       setFilter("تیشرت");
 
-    } else if (categoryFromUrl === "pants") {
-
+    } else if (
+      categoryFromUrl === "pants"
+    ) {
       setFilter("شلوار");
 
-    } else if (categoryFromUrl === "hat") {
-
+    } else if (
+      categoryFromUrl === "hat"
+    ) {
       setFilter("کلاه");
 
     } else {
-
       setFilter("همه");
-
     }
-
   }, [categoryFromUrl]);
 
-
-  /* ================= CART COUNT ================= */
+  /* ================================================= */
+  /* CART COUNT */
+  /* ================================================= */
 
   const cartCount =
     cart.reduce(
@@ -179,8 +224,9 @@ function ProductsContent() {
       0
     );
 
-
-  /* ================= FILTER PRODUCTS ================= */
+  /* ================================================= */
+  /* FILTER PRODUCTS */
+  /* ================================================= */
 
   const filteredProducts =
     filter === "همه"
@@ -190,12 +236,16 @@ function ProductsContent() {
             product.category === filter
         );
 
-
-  /* ================= ADD TO CART ================= */
+  /* ================================================= */
+  /* ADD TO CART */
+  /* ================================================= */
 
   const addToCart = (
     product: Product
   ) => {
+    if (product.stock <= 0) {
+      return;
+    }
 
     const existingProduct =
       cart.find(
@@ -203,12 +253,9 @@ function ProductsContent() {
           item.id === product.id
       );
 
-
     let newCart: CartItem[];
 
-
     if (existingProduct) {
-
       newCart =
         cart.map((item) =>
           item.id === product.id
@@ -221,48 +268,35 @@ function ProductsContent() {
         );
 
     } else {
-
       newCart = [
         ...cart,
         {
-          id: product.id,
-          name: product.name,
-          price: getPrice(product.price),
-          image: product.image,
+          ...product,
           quantity: 1,
         },
       ];
-
     }
-
 
     setCart(newCart);
 
-
     localStorage.setItem(
-      "cart",
+      "homestyle-cart",
       JSON.stringify(newCart)
     );
 
-
     setAddedProduct(product);
-
     setShowModal(true);
-
   };
-
 
   /* ================================================= */
   /* RETURN */
   /* ================================================= */
 
   return (
-
     <main
       className="products-page"
       dir="rtl"
     >
-
 
       {/* ================================================= */}
       {/* HEADER */}
@@ -274,15 +308,11 @@ function ProductsContent() {
           کالکشن HomeStyle
         </span>
 
-
         <h1>
-
           {filter === "همه"
             ? "محصولات"
             : filter}
-
         </h1>
-
 
         <p>
           محصول مورد علاقه‌ات رو پیدا کن
@@ -292,24 +322,19 @@ function ProductsContent() {
       </section>
 
 
-
       {/* ================================================= */}
       {/* PRODUCTS SECTION */}
       {/* ================================================= */}
 
       <section className="products-section">
 
-
-        {/* ================================================= */}
         {/* FILTER */}
-        {/* ================================================= */}
 
         <div className="filter-box">
 
           <span className="filter-title">
             دسته‌بندی محصولات
           </span>
-
 
           <div className="filter-buttons">
 
@@ -332,9 +357,7 @@ function ProductsContent() {
                     : "filter-btn"
                 }
               >
-
                 {item}
-
               </button>
 
             ))}
@@ -344,14 +367,31 @@ function ProductsContent() {
         </div>
 
 
-
         {/* ================================================= */}
         {/* PRODUCTS GRID */}
         {/* ================================================= */}
 
         <div className="products-page-grid">
 
-          {filteredProducts.length > 0 ? (
+          {loadingProducts ? (
+
+            <div className="no-products">
+
+              <div className="no-products-icon">
+                🛍️
+              </div>
+
+              <h2>
+                در حال بارگذاری محصولات...
+              </h2>
+
+              <p>
+                لطفاً چند لحظه صبر کن.
+              </p>
+
+            </div>
+
+          ) : filteredProducts.length > 0 ? (
 
             filteredProducts.map(
               (product) => (
@@ -361,8 +401,7 @@ function ProductsContent() {
                   key={product.id}
                 >
 
-
-                  {/* ================= PRODUCT TOP ================= */}
+                  {/* PRODUCT TOP */}
 
                   <div className="product-top-info">
 
@@ -370,20 +409,16 @@ function ProductsContent() {
                       {product.category}
                     </span>
 
-
-                    {product.badge && (
-
+                    {product.isFeatured && (
                       <strong>
-                        {product.badge}
+                        ویژه
                       </strong>
-
                     )}
 
                   </div>
 
 
-
-                  {/* ================= PRODUCT IMAGE ================= */}
+                  {/* IMAGE */}
 
                   <Link
                     href={`/products/${product.id}`}
@@ -392,25 +427,53 @@ function ProductsContent() {
 
                     <div className="shop-product-image">
 
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                      />
+                      {product.images &&
+                      product.images.length > 0 ? (
+
+                        <img
+                          src={
+                            product.images[0]
+                          }
+                          alt={
+                            product.name
+                          }
+                        />
+
+                      ) : (
+
+                        <div
+                          style={{
+                            width:
+                              "100%",
+                            height:
+                              "100%",
+                            display:
+                              "flex",
+                            alignItems:
+                              "center",
+                            justifyContent:
+                              "center",
+                            fontSize:
+                              "50px",
+                          }}
+                        >
+                          🛍️
+                        </div>
+
+                      )}
 
                     </div>
 
                   </Link>
 
 
-
-                  {/* ================= PRODUCT INFO ================= */}
+                  {/* INFO */}
 
                   <div className="shop-product-info">
 
                     <h2>
                       {product.name}
                     </h2>
-
 
                     <p>
                       {product.description}
@@ -425,16 +488,16 @@ function ProductsContent() {
                           قیمت
                         </small>
 
-
                         <strong>
                           {product.price}
+                          {" "}
+                          تومان
                         </strong>
 
                       </div>
 
 
-
-                      {/* ================= ADD TO CART ================= */}
+                      {/* ADD TO CART */}
 
                       <button
                         type="button"
@@ -445,6 +508,15 @@ function ProductsContent() {
                         onClick={() =>
                           addToCart(product)
                         }
+                        disabled={
+                          product.stock <= 0
+                        }
+                        style={{
+                          opacity:
+                            product.stock <= 0
+                              ? 0.5
+                              : 1,
+                        }}
                       >
 
                         <svg
@@ -465,19 +537,32 @@ function ProductsContent() {
 
                     </div>
 
+
+                    {/* STOCK */}
+
+                    <small
+                      style={{
+                        display:
+                          "block",
+                        marginTop:
+                          "8px",
+                      }}
+                    >
+                      {product.stock > 0
+                        ? `موجودی: ${product.stock.toLocaleString("fa-IR")} عدد`
+                        : "ناموجود"}
+                    </small>
+
                   </div>
 
                 </article>
 
               )
-
             )
 
           ) : (
 
-            /* ================================================= */
-            /* EMPTY PRODUCTS */
-            /* ================================================= */
+            /* EMPTY */
 
             <div className="no-products">
 
@@ -485,14 +570,13 @@ function ProductsContent() {
                 🛍️
               </div>
 
-
               <h2>
                 هنوز محصولی اضافه نشده
               </h2>
 
-
               <p>
-                محصولات جدید به‌زودی از پنل مدیریت اضافه می‌شوند.
+                محصولات جدید از پنل مدیریت
+                اضافه می‌شوند.
               </p>
 
             </div>
@@ -502,7 +586,6 @@ function ProductsContent() {
         </div>
 
       </section>
-
 
 
       {/* ================================================= */}
@@ -519,7 +602,6 @@ function ProductsContent() {
             }
           >
 
-
             <div
               className="cart-modal"
               onClick={(event) =>
@@ -527,8 +609,7 @@ function ProductsContent() {
               }
             >
 
-
-              {/* ================= CLOSE ================= */}
+              {/* CLOSE */}
 
               <button
                 type="button"
@@ -537,19 +618,15 @@ function ProductsContent() {
                   setShowModal(false)
                 }
               >
-
                 ×
-
               </button>
 
 
-
-              {/* ================= ICON ================= */}
+              {/* ICON */}
 
               <div className="cart-modal-icon">
                 🛒
               </div>
-
 
 
               <h2>
@@ -557,11 +634,9 @@ function ProductsContent() {
               </h2>
 
 
-
               <p>
                 آیا مایل به رفتن به سبد خرید هستید؟
               </p>
-
 
 
               <strong className="modal-product-name">
@@ -569,21 +644,16 @@ function ProductsContent() {
               </strong>
 
 
-
-              {/* ================= BUTTONS ================= */}
+              {/* BUTTONS */}
 
               <div className="cart-modal-buttons">
-
 
                 <Link
                   href="/sabad"
                   className="go-to-cart"
                 >
-
                   بله
-
                 </Link>
-
 
 
                 <button
@@ -593,9 +663,7 @@ function ProductsContent() {
                     setShowModal(false)
                   }
                 >
-
                   خیر
-
                 </button>
 
               </div>
@@ -607,15 +675,11 @@ function ProductsContent() {
         )}
 
 
-
       {/* ================================================= */}
       {/* BOTTOM NAV */}
       {/* ================================================= */}
 
       <nav className="bottom-nav">
-
-
-        {/* ================= HOME ================= */}
 
         <Link
           href="/"
@@ -623,15 +687,10 @@ function ProductsContent() {
         >
 
           <svg viewBox="0 0 24 24">
-
             <path d="M3 10.5L12 3l9 7.5" />
-
             <path d="M5 9.5V21h14V9.5" />
-
             <path d="M9 21v-6h6v6" />
-
           </svg>
-
 
           <span>
             خانه
@@ -639,9 +698,6 @@ function ProductsContent() {
 
         </Link>
 
-
-
-        {/* ================= CART ================= */}
 
         <Link
           href="/sabad"
@@ -672,7 +728,9 @@ function ProductsContent() {
             {cartCount > 0 && (
 
               <span className="cart-count">
-                {cartCount}
+                {cartCount.toLocaleString(
+                  "fa-IR"
+                )}
               </span>
 
             )}
@@ -686,9 +744,6 @@ function ProductsContent() {
 
         </Link>
 
-
-
-        {/* ================= PRODUCTS ================= */}
 
         <Link
           href="/products"
@@ -705,16 +760,12 @@ function ProductsContent() {
 
           </svg>
 
-
           <span>
             محصولات
           </span>
 
         </Link>
 
-
-
-        {/* ================= SEARCH ================= */}
 
         <Link
           href="/products"
@@ -733,7 +784,6 @@ function ProductsContent() {
 
           </svg>
 
-
           <span>
             جستجو
           </span>
@@ -743,7 +793,6 @@ function ProductsContent() {
       </nav>
 
     </main>
-
   );
 }
 
@@ -753,32 +802,20 @@ function ProductsContent() {
 /* ================================================= */
 
 export default function Products() {
-
   return (
-
     <Suspense
       fallback={
-
         <main
           dir="rtl"
           className="products-page"
         >
-
           <div className="products-loading">
-
             در حال بارگذاری محصولات...
-
           </div>
-
         </main>
-
       }
     >
-
       <ProductsContent />
-
     </Suspense>
-
   );
-
 }

@@ -5,8 +5,15 @@ import { useEffect, useState } from "react";
 type CartItem = {
   id: number;
   name: string;
-  price: number;
-  image: string;
+  price: string;
+  category: string;
+  description: string;
+  images: string[];
+  sizes: string[];
+  colors: string[];
+  isFeatured: boolean;
+  collections: string[];
+  stock: number;
   quantity: number;
 };
 
@@ -14,12 +21,28 @@ export default function Sabad() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
 
+  // دریافت سبد خرید
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
+    const savedCart = localStorage.getItem("homestyle-cart");
 
     if (savedCart) {
       try {
-        setCart(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+
+        // هماهنگ کردن محصولات قدیمی با ساختار جدید
+        const fixedCart = parsedCart.map((item: any) => ({
+          ...item,
+          price: String(item.price ?? "0"),
+          images:
+            Array.isArray(item.images) && item.images.length > 0
+              ? item.images
+              : item.image
+                ? [item.image]
+                : [],
+          quantity: Number(item.quantity ?? 1),
+        }));
+
+        setCart(fixedCart);
       } catch {
         setCart([]);
       }
@@ -28,15 +51,17 @@ export default function Sabad() {
     setLoaded(true);
   }, []);
 
+  // ذخیره سبد خرید
   const updateCart = (newCart: CartItem[]) => {
     setCart(newCart);
 
     localStorage.setItem(
-      "cart",
+      "homestyle-cart",
       JSON.stringify(newCart)
     );
   };
 
+  // افزایش تعداد
   const increaseQuantity = (id: number) => {
     const newCart = cart.map((item) =>
       item.id === id
@@ -50,6 +75,7 @@ export default function Sabad() {
     updateCart(newCart);
   };
 
+  // کاهش تعداد
   const decreaseQuantity = (id: number) => {
     const newCart = cart
       .map((item) =>
@@ -60,13 +86,12 @@ export default function Sabad() {
             }
           : item
       )
-      .filter(
-        (item) => item.quantity > 0
-      );
+      .filter((item) => item.quantity > 0);
 
     updateCart(newCart);
   };
 
+  // حذف محصول
   const removeProduct = (id: number) => {
     const newCart = cart.filter(
       (item) => item.id !== id
@@ -75,19 +100,30 @@ export default function Sabad() {
     updateCart(newCart);
   };
 
+  // تعداد کل محصولات
   const totalCount = cart.reduce(
     (total, item) =>
       total + item.quantity,
     0
   );
 
+  // تبدیل قیمت به عدد
+  const getPrice = (price: string | number) => {
+    const cleaned = String(price)
+      .replace(/[^\d]/g, "");
+
+    return Number(cleaned) || 0;
+  };
+
+  // مبلغ کل
   const totalPrice = cart.reduce(
     (total, item) =>
       total +
-      item.price * item.quantity,
+      getPrice(item.price) * item.quantity,
     0
   );
 
+  // فرمت قیمت
   const formatPrice = (price: number) => {
     return price.toLocaleString("fa-IR");
   };
@@ -97,7 +133,6 @@ export default function Sabad() {
       className="cart-page"
       dir="rtl"
     >
-
       <div className="cart-container">
 
         {/* HEADER */}
@@ -138,6 +173,8 @@ export default function Sabad() {
 
         <div className="cart-content">
 
+          {/* PRODUCTS */}
+
           <div className="cart-products">
 
             {!loaded ? (
@@ -152,7 +189,7 @@ export default function Sabad() {
 
             ) : cart.length === 0 ? (
 
-              /* EMPTY */
+              /* EMPTY CART */
 
               <div className="empty-cart">
 
@@ -167,8 +204,16 @@ export default function Sabad() {
                     strokeLinejoin="round"
                   >
                     <path d="M3 4h2l2 12h10l3-9H6" />
-                    <circle cx="9" cy="20" r="1.5" />
-                    <circle cx="18" cy="20" r="1.5" />
+                    <circle
+                      cx="9"
+                      cy="20"
+                      r="1.5"
+                    />
+                    <circle
+                      cx="18"
+                      cy="20"
+                      r="1.5"
+                    />
                   </svg>
 
                 </div>
@@ -206,12 +251,21 @@ export default function Sabad() {
                     key={item.id}
                   >
 
+                    {/* IMAGE */}
+
                     <img
-                      src={item.image}
+                      src={
+                        item.images &&
+                        item.images.length > 0
+                          ? item.images[0]
+                          : "/media/placeholder.jpg"
+                      }
                       alt={item.name}
                       className="cart-item-image"
                     />
 
+
+                    {/* INFO */}
 
                     <div className="cart-item-info">
 
@@ -220,10 +274,18 @@ export default function Sabad() {
                       </h3>
 
                       <p>
-                        {formatPrice(item.price)}
+                        {formatPrice(
+                          getPrice(item.price)
+                        )}
                         {" "}
                         تومان
                       </p>
+
+                      {item.category && (
+                        <small>
+                          {item.category}
+                        </small>
+                      )}
 
 
                       {/* QUANTITY */}
@@ -263,13 +325,16 @@ export default function Sabad() {
                     </div>
 
 
+                    {/* LEFT */}
+
                     <div className="cart-item-left">
 
                       <strong>
                         {formatPrice(
-                          item.price *
+                          getPrice(item.price) *
                             item.quantity
-                        )}{" "}
+                        )}
+                        {" "}
                         تومان
                       </strong>
 
@@ -305,6 +370,7 @@ export default function Sabad() {
             <h2>
               خلاصه خرید
             </h2>
+
 
             <div className="summary-row">
 
@@ -365,19 +431,27 @@ export default function Sabad() {
               </strong>
 
             </div>
+
+
+            {/* CHECKOUT */}
+
             <a
-  href="/checkout"
-  className="checkout-btn"
-  style={{
-    pointerEvents: cart.length === 0 ? "none" : "auto",
-    opacity: cart.length === 0 ? 0.5 : 1,
-  }}
->
-  ادامه ثبت سفارش
-</a>
+              href="/checkout"
+              className="checkout-btn"
+              style={{
+                pointerEvents:
+                  cart.length === 0
+                    ? "none"
+                    : "auto",
 
-
-           
+                opacity:
+                  cart.length === 0
+                    ? 0.5
+                    : 1,
+              }}
+            >
+              ادامه ثبت سفارش
+            </a>
 
           </div>
 
@@ -572,14 +646,27 @@ export default function Sabad() {
 
             <svg viewBox="0 0 24 24">
               <path d="M3 4h2l2 12h10l3-9H6" />
-              <circle cx="9" cy="20" r="1.5" />
-              <circle cx="18" cy="20" r="1.5" />
+              <circle
+                cx="9"
+                cy="20"
+                r="1.5"
+              />
+              <circle
+                cx="18"
+                cy="20"
+                r="1.5"
+              />
             </svg>
 
+
             {totalCount > 0 && (
+
               <span className="cart-count">
-                {totalCount}
+                {totalCount.toLocaleString(
+                  "fa-IR"
+                )}
               </span>
+
             )}
 
           </div>
@@ -597,9 +684,13 @@ export default function Sabad() {
         >
 
           <svg viewBox="0 0 24 24">
+
             <path d="M4 7h16" />
+
             <path d="M5 7l1 13h12l1-13" />
+
             <path d="M8 7a4 4 0 0 1 8 0" />
+
           </svg>
 
           <span>
@@ -615,6 +706,7 @@ export default function Sabad() {
         >
 
           <svg viewBox="0 0 24 24">
+
             <circle
               cx="11"
               cy="11"
@@ -622,6 +714,7 @@ export default function Sabad() {
             />
 
             <path d="m20 20-4-4" />
+
           </svg>
 
           <span>

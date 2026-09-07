@@ -3,6 +3,24 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type Product = {
+  id: number;
+  name: string;
+  price: string;
+  category: string;
+  description: string;
+  images: string[];
+  sizes: string[];
+  colors: string[];
+  isFeatured: boolean;
+  collections: string[];
+  stock: number;
+};
+
+type CartProduct = Product & {
+  quantity: number;
+};
+
 const reviews = [
   {
     name: "سارا",
@@ -22,6 +40,7 @@ export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [notification, setNotification] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
 
   /* ================= LOAD NOTIFICATION ================= */
 
@@ -35,22 +54,85 @@ export default function Home() {
     }
   }, []);
 
+  /* ================= LOAD PRODUCTS ================= */
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+          throw new Error("خطا در دریافت محصولات");
+        }
+
+        const data = await response.json();
+
+        setProducts(data);
+      } catch (error) {
+        console.error("Error loading products:", error);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  /* ================= FEATURED PRODUCTS ================= */
+
+  const featuredProducts = products.filter(
+    (product) => product.isFeatured
+  );
+
+  /* ================= ADD TO CART ================= */
+
+  const addToCart = (product: Product) => {
+    const savedCart = localStorage.getItem("homestyle-cart");
+
+    const cart: CartProduct[] = savedCart
+      ? JSON.parse(savedCart)
+      : [];
+
+    const existingProduct = cart.find(
+      (item) => item.id === product.id
+    );
+
+    if (existingProduct) {
+      existingProduct.quantity += 1;
+    } else {
+      cart.push({
+        ...product,
+        quantity: 1,
+      });
+    }
+
+    localStorage.setItem(
+      "homestyle-cart",
+      JSON.stringify(cart)
+    );
+
+    window.location.href = "/sabad";
+  };
+
   return (
     <main dir="rtl">
 
       {/* ================= HEADER ================= */}
 
       <header className="site-header">
+
         <div className="header-container">
 
           <div className="logo">
+
             <Link href="/">
+
               <img
                 src="media/hom.jpg"
                 alt="لوگوی فروشگاه"
                 className="logo-img"
               />
+
             </Link>
+
           </div>
 
           <nav className="main-nav">
@@ -100,8 +182,11 @@ export default function Home() {
               type="button"
               className="icon-btn"
               aria-label="جستجو"
-              onClick={() => setShowSearch(true)}
+              onClick={() =>
+                setShowSearch(true)
+              }
             >
+
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -110,6 +195,7 @@ export default function Home() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
+
                 <circle
                   cx="11"
                   cy="11"
@@ -122,7 +208,9 @@ export default function Home() {
                   x2="16.65"
                   y2="16.65"
                 />
+
               </svg>
+
             </button>
 
 
@@ -133,6 +221,7 @@ export default function Home() {
               className="icon-btn"
               aria-label="حساب کاربری"
             >
+
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -141,6 +230,7 @@ export default function Home() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
+
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
 
                 <circle
@@ -148,7 +238,9 @@ export default function Home() {
                   cy="7"
                   r="4"
                 />
+
               </svg>
+
             </Link>
 
 
@@ -159,6 +251,7 @@ export default function Home() {
               className="icon-btn cart-btn"
               aria-label="سبد خرید"
             >
+
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -167,11 +260,13 @@ export default function Home() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
+
                 <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
 
                 <path d="M3 6h18" />
 
                 <path d="M16 10a4 4 0 0 1-8 0" />
+
               </svg>
 
               <span className="cart-count">
@@ -183,12 +278,14 @@ export default function Home() {
           </div>
 
         </div>
+
       </header>
 
 
       {/* ================= NOTIFICATION ================= */}
 
       {notification && (
+
         <section className="home-notification">
 
           <div className="home-notification-content">
@@ -204,12 +301,14 @@ export default function Home() {
           </div>
 
         </section>
+
       )}
 
 
       {/* ================= SEARCH MODAL ================= */}
 
       {showSearch && (
+
         <div
           className="search-overlay"
           onClick={() =>
@@ -247,6 +346,7 @@ export default function Home() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
+
                 <circle
                   cx="11"
                   cy="11"
@@ -259,6 +359,7 @@ export default function Home() {
                   x2="16.65"
                   y2="16.65"
                 />
+
               </svg>
 
             </div>
@@ -283,6 +384,7 @@ export default function Home() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
+
                 <circle
                   cx="11"
                   cy="11"
@@ -295,6 +397,7 @@ export default function Home() {
                   x2="16.65"
                   y2="16.65"
                 />
+
               </svg>
 
 
@@ -314,6 +417,7 @@ export default function Home() {
 
 
             {searchText.trim() !== "" && (
+
               <div className="search-results">
 
                 <span className="search-results-title">
@@ -337,11 +441,13 @@ export default function Home() {
                 </div>
 
               </div>
+
             )}
 
           </div>
 
         </div>
+
       )}
 
 
@@ -477,12 +583,101 @@ export default function Home() {
         </div>
 
 
-        <div className="products-grid">
+        <div className="home-products-grid">
 
-          {/* 
-            محصولات ویژه‌ای که ادمین از پنل انتخاب می‌کند
-            بعداً به صورت خودکار اینجا نمایش داده می‌شوند.
-          */}
+          {featuredProducts.length === 0 ? (
+
+            <div className="home-products-empty">
+
+              <p>
+                هنوز محصول ویژه‌ای اضافه نشده است.
+              </p>
+
+            </div>
+
+          ) : (
+
+            featuredProducts.map((product) => (
+
+              <div
+                className="home-product-card"
+                key={product.id}
+              >
+
+                <Link
+                  href={`/products/${product.id}`}
+                  className="home-product-link"
+                >
+
+                  <div className="home-product-image">
+
+                    {product.images.length > 0 ? (
+
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                      />
+
+                    ) : (
+
+                      <span>
+                        عکس محصول
+                      </span>
+
+                    )}
+
+                  </div>
+
+
+                  <div className="home-product-content">
+
+                    <span className="home-product-category">
+                      {product.category}
+                    </span>
+
+                    <h3>
+                      {product.name}
+                    </h3>
+
+                    <p className="home-product-price">
+                      {product.price}
+                    </p>
+
+                    {product.stock > 0 ? (
+
+                      <span className="home-product-stock">
+                        موجودی: {product.stock} عدد
+                      </span>
+
+                    ) : (
+
+                      <span className="home-product-out">
+                        ناموجود
+                      </span>
+
+                    )}
+
+                  </div>
+
+                </Link>
+
+
+                <button
+                  type="button"
+                  className="home-product-add"
+                  aria-label={`افزودن ${product.name} به سبد خرید`}
+                  onClick={() =>
+                    addToCart(product)
+                  }
+                >
+                  +
+                </button>
+
+              </div>
+
+            ))
+
+          )}
 
         </div>
 
@@ -557,9 +752,13 @@ export default function Home() {
         >
 
           <svg viewBox="0 0 24 24">
+
             <path d="M3 10.5L12 3l9 7.5" />
+
             <path d="M5 9.5V21h14V9.5" />
+
             <path d="M9 21v-6h6v6" />
+
           </svg>
 
           <span>
@@ -575,6 +774,7 @@ export default function Home() {
         >
 
           <svg viewBox="0 0 24 24">
+
             <path d="M3 4h2l2 12h10l3-9H6" />
 
             <circle
@@ -604,9 +804,13 @@ export default function Home() {
         >
 
           <svg viewBox="0 0 24 24">
+
             <path d="M4 7h16" />
+
             <path d="M5 7l1 13h12l1-13" />
+
             <path d="M8 7a4 4 0 0 1 8 0" />
+
           </svg>
 
           <span>
@@ -625,6 +829,7 @@ export default function Home() {
         >
 
           <svg viewBox="0 0 24 24">
+
             <circle
               cx="11"
               cy="11"
@@ -702,7 +907,6 @@ export default function Home() {
               درباره ما
             </Link>
 
-            {/* ورود به پنل مدیریت */}
 
             <div className="admin-entry">
 
